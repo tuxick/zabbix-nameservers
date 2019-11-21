@@ -1,0 +1,37 @@
+#!/bin/bash
+# part of zabbix-nameservers
+# check DNS response time
+# ERROR VALUES:
+# -9: server not responding
+# -11: wrong parameters
+# -127: dig not installed (bind-utils)
+
+#default, overruled by $2
+HOST="www.google.com"
+
+if [ $# -lt 1 ]
+then
+	echo "-11"
+	exit 
+fi
+
+NS=$1
+
+if [ $# -gt 1 ]
+then
+	HOST=$2
+fi
+TMP=`mktemp`
+dig $HOST @$NS +tries=1 +timeout=1 > $TMP >&1
+
+E=$?
+if [ $E -ne 0 ]
+then
+	echo "-$E"
+    rm $TMP
+	exit
+fi
+
+grep "Query time" $TMP| awk '{ print $4 }'
+rm $TMP
+
