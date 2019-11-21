@@ -1,0 +1,43 @@
+# vim:ft=ansible:
+# dns performance checks
+---
+  - hosts: "{{ target }}"
+    become: true
+    gather_facts: false
+    tasks: 
+
+      - name: check for config dir
+        stat:
+          path: /etc/zabbix/zabbix_agentd.d
+        register: configdir
+
+      - name: install dns.conf
+        copy:
+          src: /var/ansible/files/zabbixdns.conf
+          dest: /etc/zabbix/zabbix_agentd.d/dns.conf
+        register: included
+        when: configdir.stat.isdir is defined and configdir.stat.isdir
+        notify: reload zabbix agent
+
+      - name: install checkdns
+        copy:
+          src: /var/ansible/files/checkdns
+          dest: /usr/local/bin/checkdns
+          mode: a+rx
+        when: configdir.stat.isdir is defined and configdir.stat.isdir
+
+
+      - name: install discover file
+        copy:
+          src: /var/ansible/files/discoverdns
+          dest: /usr/local/bin/discoverdns
+          mode: 0755
+        notify: reload zabbix agent
+
+
+    handlers: 
+      - name: reload zabbix agent
+        service:
+          name: zabbix-agent
+          state: restarted
+
